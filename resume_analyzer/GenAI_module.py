@@ -1,19 +1,22 @@
 import spacy
-from langchain.chat_models import ChatOpenAI
+from langchain.chat_models import ChatGoogleGemini
 from langchain.schema import SystemMessage
 from langchain.chains import LLMChain
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from collections import Counter
 
-class ChatBot:
+class ResumeAnalyzer:
     def __init__(self, api_key):
-        """Initialize the ChatBot with the OpenAI API key and load the NLP model."""
-        self.chat_model = ChatOpenAI(api_key=api_key)
+        """Initialize the ResumeAnalyzer with the Gemini API key and load the NLP model."""
+        self.chat_model = ChatGoogleGemini(api_key=api_key)
         self.nlp = spacy.load("en_core_web_sm")  # Load spaCy model
         self.skills_list = [
             "Python", "Machine Learning", "Data Analysis", "Project Management",
             "Leadership", "Java", "C++", "SQL", "Communication", "Teamwork",
-            "Problem Solving"  # Extend this list as needed
+            "Problem Solving", "Deep Learning", "Artificial Intelligence",
+            "Cloud Computing", "Cybersecurity", "Software Development",
+            "Agile Methodologies", "DevOps", "Big Data", "Data Science",
+            "Natural Language Processing", "Computer Vision"  # Extended skill list
         ]
         self.chain = self.setup_chat_model()  # Set up the chat model
 
@@ -64,4 +67,4 @@ class ChatBot:
             return response
         except Exception as e:
             print(f"Error processing the resume: {e}")
-            return "Error processing the resume as your API key is Invalid!!!"  
+            return "Error processing the resume as your API key is Invalid!!!"

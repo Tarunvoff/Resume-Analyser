@@ -17,7 +17,7 @@ Upload your resume in either PDF or DOCX format. Our AI model will extract relev
 """)
 
 # Input for API key
-api_key = st.text_input("Enter your OpenAI API key")
+api_key = st.text_input("Enter your GEMINI  API key")
 
 # Initialize FileHandler
 file_handler = FileHandler()
