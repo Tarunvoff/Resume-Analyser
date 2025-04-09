@@ -1,70 +1,54 @@
 import spacy
-from langchain.chat_models import ChatGoogleGemini
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.schema import SystemMessage
 from langchain.chains import LLMChain
 from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
 from collections import Counter
+from spacy.matcher import PhraseMatcher
 
 class ResumeAnalyzer:
     def __init__(self, api_key):
-        """Initialize the ResumeAnalyzer with the Gemini API key and load the NLP model."""
-        self.chat_model = ChatGoogleGemini(api_key=api_key)
-        self.nlp = spacy.load("en_core_web_sm")  # Load spaCy model
+        self.chat_model = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", google_api_key=api_key)  # ✅ Fixed API key issue
+        self.nlp = spacy.load("en_core_web_sm")
         self.skills_list = [
             "Python", "Machine Learning", "Data Analysis", "Project Management",
             "Leadership", "Java", "C++", "SQL", "Communication", "Teamwork",
             "Problem Solving", "Deep Learning", "Artificial Intelligence",
             "Cloud Computing", "Cybersecurity", "Software Development",
             "Agile Methodologies", "DevOps", "Big Data", "Data Science",
-            "Natural Language Processing", "Computer Vision"  # Extended skill list
+            "Natural Language Processing", "Computer Vision"
         ]
-        self.chain = self.setup_chat_model()  # Set up the chat model
+        self.chain = self.setup_chat_model()
 
     def setup_chat_model(self):
-        """Set up the chat model with a template for processing resumes."""
         prompt = ChatPromptTemplate(
             input_variables=['resume_text'],
             messages=[
-                SystemMessage(content="You are an elite AI consultant with expertise in psychometric evaluations and career trajectory analytics. You possess profound capabilities to assess complex professional histories and delineate strategic career development plans."),
+                SystemMessage(content='''You are an advanced AI consultant with expertise in career trajectory analysis, professional skill assessment, and talent development. Your role is to meticulously analyze the provided resume, identify key technical and soft skills, and evaluate the candidate's expertise based on context, experience level, and industry relevance.
+
+Carefully extract both explicitly mentioned skills and implied competencies inferred from job roles, projects, certifications, and education history. Categorize the identified skills into relevant domains such as programming languages, frameworks, analytical skills, leadership qualities, communication abilities, problem-solving aptitude, and domain-specific expertise.
+
+Additionally, assess the depth of proficiency for each skill based on years of experience, project involvement, and role responsibilities. Provide a structured output that highlights the candidate’s strongest competencies, emerging skills, and areas for improvement. If applicable, suggest additional skills that would enhance their career prospects based on current industry trends.'''),
                 HumanMessagePromptTemplate.from_template(
-                    "Proceed with an in-depth analysis of the submitted resume. Evaluate the candidate's educational and professional timeline, "
-                    "identify pivotal skills and distinguishing achievements. Synthesize this data to construct a nuanced summary of potential career pathways. "
-                    "Recommend refined strategies for career advancement considering emerging industry trends. Here is the resume content:\n\n{resume_text}"
+                    "Analyze the resume and provide career insights:\n\n{resume_text}"
                 )
             ]
         )
-
-        chain = LLMChain(
-            llm=self.chat_model, 
-            prompt=prompt, 
-            verbose=True
-        )
-
-        return chain
+        return LLMChain(llm=self.chat_model, prompt=prompt, verbose=True)
 
     def extract_skills(self, resume_text):
-        """Extract skills from the resume text and assess proficiency using NLP."""
+        matcher = PhraseMatcher(self.nlp.vocab, attr="LOWER")
+        patterns = [self.nlp.make_doc(skill) for skill in self.skills_list]
+        matcher.add("SKILLS", patterns)
+
         doc = self.nlp(resume_text)
-        skill_counts = Counter()
+        matches = matcher(doc)
+        skill_counts = Counter([doc[start:end].text for _, start, end in matches])
 
-        # Identify skills based on the predefined list
-        for skill in self.skills_list:
-            # Use spaCy's tokenizer to find exact matches
-            skill_tokens = self.nlp(skill.lower())
-            for token in doc:
-                if token.lemma_ == skill_tokens[0].lemma_:  # Match lemmatized form
-                    skill_counts[skill] += 1
-
-        # Calculate proficiency based on counts
-        proficiency = {skill: min(count * 20, 100) for skill, count in skill_counts.items() if count > 0}
-
-        return proficiency  # Return the proficiency dictionary
+        return {skill: min(count * 20, 100) for skill, count in skill_counts.items()}
 
     def get_resume_insights(self, resume_text):
-        """Generate insights from the resume by running the chat model."""
         try:
-            response = self.chain.run({'resume_text': resume_text})  # Use the pre-setup chain
-            return response
+            return self.chain.run({'resume_text': resume_text})
         except Exception as e:
-            print(f"Error processing the resume: {e}")
-            return "Error processing the resume as your API key is Invalid!!!"
+            return f"Error processing the resume: {str(e)}"
