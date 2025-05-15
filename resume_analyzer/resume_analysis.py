@@ -7,7 +7,7 @@ from fpdf import FPDF
 from file_handling import FileHandler
 from GenAI_module import ResumeAnalyzer  # Fixed incorrect import
 
-# Apply Custom CSS
+# Apply Custom CSS  
 def local_css():
     st.markdown("""
         <style>

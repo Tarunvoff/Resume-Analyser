@@ -1,341 +1,55 @@
-import streamlit as st
-import os
-import tempfile
-import matplotlib.pyplot as plt
-from io import BytesIO
-from fpdf import FPDF
-from file_handling import FileHandler
-from resume_parser import ResumeParser
-from Job_matcher import JobMatcher
+from flask import Flask, request, render_template, jsonify
 from ats_scoring import ATSScoring
 from career_coaching import CareerCoach
-from GenAI_module import ResumeAnalyzer  # Ensure correct import
-
-# Apply Custom CSS for Better Styling
-def local_css():
-    st.markdown("""
-        <style>
-            .stApp {background-color: #f5f7fa;}
-            .title {color: #007bff; font-size: 30px; font-weight: bold; text-align: center;}
-            .subtitle {font-size: 18px; font-weight: bold; color: #444; text-align: center;}
-            .upload-box {border: 2px dashed #007bff; padding: 15px; border-radius: 10px; background-color: #fff; text-align: center;}
-            .stButton>button {background-color: #007bff; color: white; font-size: 16px; padding: 8px; border-radius: 5px;}
-        </style>
-    """, unsafe_allow_html=True)
-
-st.set_page_config(page_title="AI Resume Analyzer", layout="wide")
-local_css()
-
-# Header
-st.markdown('<p class="title">📄 AI-Powered Resume Analyzer</p>', unsafe_allow_html=True)
-st.markdown('<p class="subtitle">Upload your resume and get detailed insights, job matching, ATS scoring, and career recommendations.</p>', unsafe_allow_html=True)
-
-# Upload Section
-st.markdown('<div class="upload-box">📂 Upload your resume (PDF or DOCX format)</div>', unsafe_allow_html=True)
-uploaded_file = st.file_uploader("📂 Upload Your Resume", type=['pdf', 'docx'])
-
-api_key = st.text_input("🔑 Enter your GEMINI API Key:", type="password")
-
-if uploaded_file and api_key:
-    temp_dir = tempfile.TemporaryDirectory()
-    temp_file_path = os.path.join(temp_dir.name, uploaded_file.name)
-
-    with open(temp_file_path, "wb") as temp_file:
-        temp_file.write(uploaded_file.read())
-
-    # Process Resume
-    file_handler = FileHandler()
-    resume_text = file_handler.extract_text(temp_file_path)
-    page_count = file_handler.get_file_page_count(temp_file_path)
-    st.success(f"✅ Resume Uploaded Successfully | Total Pages: {page_count}")
-
-    # Initialize Modules
-    resume_parser = ResumeParser()
-    job_matcher = JobMatcher()
-    ats_scoring = ATSScoring()
-    career_coach = CareerCoach(api_key=api_key)
-    resume_analyzer = ResumeAnalyzer(api_key)
-
-    with st.spinner("🔍 Extracting resume details..."):
-        parsed_resume = resume_parser.parse_resume(resume_text)
-
-    with st.expander("📊 Parsed Resume Details (Click to Expand)"):
-        st.write(parsed_resume)
-
-    job_description = st.text_area("📝 Paste Job Description for Matching:")
-
-    if job_description:
-        with st.spinner("🔍 Matching resume with job description..."):
-            job_match_score = job_matcher.match_resume_to_job(resume_text, job_description)
-            ats_score = ats_scoring.score_resume(resume_text, job_description)
-
-        st.subheader("📊 Job Match & ATS Score")
-        st.write(f"✅ **Job Match Score:** {job_match_score}%")
-        st.write(f"✅ **ATS Score:** {ats_score}%")
-
-    with st.spinner("🤖 Analyzing career insights..."):
-        insights = resume_analyzer.get_resume_insights(resume_text)
-
-    with st.expander("📊 Resume Insights (Click to Expand)"):
-        st.write(insights)
-
-    st.subheader("📌 Skills Analysis")
-    skills_proficiency = resume_analyzer.extract_skills(resume_text)
-
-    if skills_proficiency:
-        skills = list(skills_proficiency.keys())
-        proficiency = list(skills_proficiency.values())
-
-        fig, ax = plt.subplots(figsize=(8, 4))
-        ax.barh(skills, proficiency, color='skyblue')
-        ax.set_xlabel('Proficiency (%)')
-        ax.set_title('Skills Proficiency Based on Resume Analysis')
-        st.pyplot(fig)
-    else:
-        st.warning("⚠ No relevant skills found in the resume.")
-
-    st.subheader("💼 Career Advice")
-    user_query = st.text_input("🔍 Ask the Career Coach:")
-    
-    if user_query:
-        with st.spinner("🤖 Generating career advice..."):
-            career_advice = career_coach.get_career_advice(user_query)
-        st.write(career_advice)
-
-    def create_pdf(text):
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.multi_cell(200, 10, txt="Resume Insights", align="C")
-        pdf.multi_cell(200, 10, txt=text)
-        return pdf.output(dest='S').encode('latin1')
-
-    st.markdown("---")
-    st.markdown("### 📥 Download Your Report")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        if st.button("📄 Download Insights as PDF"):
-            pdf_content = create_pdf(insights)
-            st.download_button(label="Download PDF", data=pdf_content, file_name="resume_insights.pdf", mime="application/pdf")
-
-    with col2:
-        def convert_fig_to_bytes(fig):
-            buf = BytesIO()
-            fig.savefig(buf, format="png")
-            buf.seek(0)
-            return buf.getvalue()
-
-        if st.button("📊 Download Skill Analysis as PNG"):
-            st.download_button(label="Download PNG", data=convert_fig_to_bytes(fig), file_name="skills_analysis.png", mime="image/png")
-
-    temp_dir.cleanup()
-else:
-    st.info("📂 Please upload a resume and enter API key to get started.")
-
-st.markdown("---")
-st.markdown("### 📚 Resume Insights by [Tarun V] 📞 [Contact Me](https://www.linkedin.com/in/tarun-v-19196b329/)")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# import streamlit as st
-# import os
-# import tempfile
-# import matplotlib.pyplot as plt
-# from io import BytesIO
-# from fpdf import FPDF
-# from file_handling import FileHandler
-# from GenAI_module import ResumeAnalyzer  # Fixed import
-
-# # Apply Custom CSS for Better Styling
-# def local_css():
-#     st.markdown("""
-#         <style>
-#             .stApp {background-color: #f5f7fa;}
-#             .title {color: #007bff; font-size: 30px; font-weight: bold; text-align: center;}
-#             .subtitle {font-size: 18px; font-weight: bold; color: #444; text-align: center;}
-#             .upload-box {border: 2px dashed #007bff; padding: 15px; border-radius: 10px; background-color: #fff; text-align: center;}
-#             .stButton>button {background-color: #007bff; color: white; font-size: 16px; padding: 8px; border-radius: 5px;}
-#         </style>
-#     """, unsafe_allow_html=True)
-
-# # Initialize UI
-# st.set_page_config(page_title="AI Resume Analyzer", layout="wide")
-# local_css()
-
-# # Header Section
-# st.markdown('<p class="title">📄 AI-Powered Resume Analyzer</p>', unsafe_allow_html=True)
-# st.markdown('<p class="subtitle">Upload your resume and get detailed insights, skills analysis, and career recommendations.</p>', unsafe_allow_html=True)
-
-# # Upload Section
-# st.markdown('<div class="upload-box">📂 Upload your resume (PDF or DOCX format)</div>', unsafe_allow_html=True)
-# uploaded_file = st.file_uploader(
-#     "📂 Upload Your Resume (PDF or DOCX)",  # ✅ Add a proper label
-#     type=['pdf', 'docx']
-# )
-
-# # Resume Upload Status
-# if uploaded_file is not None:
-#     # Create a temporary file to store the uploaded file
-#     with tempfile.NamedTemporaryFile(suffix='.pdf') as tmp_file:
-#         tmp_file.write(uploaded_file.read())
-#         st.success(f"✅ Resume Uploaded Successfully | Total Pages: {FileHandler.get_file_page_count(tmp_file.name)}")
-# else:
-#     st.error("🚫 No file uploaded. Please upload a resume to proceed.")
-
-# # Resume Upload Status)
-
-# # API Key Input
-# api_key = st.text_input("🔑 Enter your GEMINI API Key:", type="password")
-
-# if uploaded_file is not None:
-#     temp_dir = tempfile.TemporaryDirectory()
-#     temp_file_path = os.path.join(temp_dir.name, uploaded_file.name)
-
-#     with open(temp_file_path, "wb") as temp_file:
-#         temp_file.write(uploaded_file.read())
-
-#     # Extract text from resume (Backend Processing)
-#     try:
-#         file_handler = FileHandler()
-#         resume_text = file_handler.extract_text(temp_file_path)  # ✅ Extracted but NOT displayed
-
-#         # Display Resume Upload Status
-#         page_count = file_handler.get_file_page_count(temp_file_path)
-#         st.success(f"✅ Resume Uploaded Successfully | Total Pages: {page_count}")
-
-#         # Check API Key
-#         if api_key:
-#             chatbot = ResumeAnalyzer(api_key)
-
-#             # Show Progress Spinner
-#             with st.spinner("🔍 Analyzing resume for career insights..."):
-#                 insights = chatbot.get_resume_insights(resume_text)
-
-#             # Display Resume Insights
-#             with st.expander("📊 Resume Insights (Click to Expand)"):
-#                 st.write(insights)
-
-#             # Generate and Display Skills Analysis
-#             st.subheader("📌 Skills Analysis")
-#             skills_proficiency = chatbot.extract_skills(resume_text)
-
-#             if skills_proficiency:
-#                 skills = list(skills_proficiency.keys())
-#                 proficiency = list(skills_proficiency.values())
-
-#                 fig, ax = plt.subplots(figsize=(8, 4))
-#                 ax.barh(skills, proficiency, color='skyblue')
-#                 ax.set_xlabel('Proficiency (%)')
-#                 ax.set_title('Skills Proficiency Based on Resume Analysis')
-#                 st.pyplot(fig)
-#             else:
-#                 st.warning("⚠ No relevant skills found in the resume.")
-
-#             # Download Resume Insights as PDF
-#             def create_pdf(insights_text):
-#                 pdf = FPDF()
-#                 pdf.add_page()
-#                 pdf.set_font("Arial", size=12)
-#                 pdf.multi_cell(200, 10, txt="Resume Insights", align="C")
-#                 pdf.multi_cell(200, 10, txt=insights_text)
-#                 return pdf.output(dest='S').encode('latin1')
-
-#             st.markdown("---")
-#             st.markdown("### 📥 Download Your Report")
-#             col1, col2 = st.columns(2)
-
-#             with col1:
-#                 if st.button("📄 Download Insights as PDF"):
-#                     pdf_content = create_pdf(insights)
-#                     st.download_button(
-#                         label="Download PDF",
-#                         data=pdf_content,
-#                         file_name="resume_insights.pdf",
-#                         mime="application/pdf"
-#                     )
-
-#             with col2:
-#                 def convert_fig_to_bytes(fig):
-#                     buf = BytesIO()
-#                     fig.savefig(buf, format="png")
-#                     buf.seek(0)
-#                     return buf.getvalue()
-
-#                 if st.button("📊 Download Skill Analysis as PNG"):
-#                     st.download_button(
-#                         label="Download PNG",
-#                         data=convert_fig_to_bytes(fig),
-#                         file_name="skills_analysis.png",
-#                         mime="image/png"
-#                     )
-
-#         else:
-#             st.warning("⚠ Please provide an API key to generate insights.")
-
-#     except Exception as e:
-#         st.error(f"❌ Error processing the file: {e}")
-
-#     temp_dir.cleanup()
-# else:
-#     st.info("📂 Please upload a resume to get started.")
-
-# st.markdown("---")
-
-# # Footer
-# st.markdown("### 📚 Resume Insights by [Tarun V] 📞 [Contact Me](https://www.linkedin.com/in/tarun-v-19196b329/")
+from resume_analysis import ResumeAnalyzer
+import os
+
+# Initialize Flask app
+app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+# Initialize components
+ats = ATSScoring()
+career_coach = CareerCoach(api_key="AIzaSyCkfedzi5Y-YmFMixYVFx3valNtxQSfp10")
+analyzer = ResumeAnalyzer(api_key="AIzaSyCkfedzi5Y-YmFMixYVFx3valNtxQSfp10")
+
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        resume_file = request.files['resume']
+        job_description = request.form['job_description']
+        user_query = request.form.get('user_query', 'What should I improve in my resume?')
+
+        if not resume_file:
+            return "No resume file uploaded", 400
+
+        # Save uploaded file
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], resume_file.filename)
+        resume_file.save(file_path)
+
+        # Score resume
+        with open(file_path, 'rb') as f:
+            ats_result = ats.score_resume(f, job_description)
+
+        # Extract resume text for analysis
+        from file_handling import FileHandler
+        resume_text = FileHandler.extract_text(file_path)
+
+        # Get career advice & insights
+        career_advice = career_coach.get_career_advice(user_query)
+        skill_scores = analyzer.extract_skills(resume_text)
+        resume_insights = analyzer.get_resume_insights(resume_text)
+
+        return jsonify({
+            "ats_result": ats_result,
+            "career_advice": career_advice,
+            "skills": skill_scores,
+            "insights": resume_insights
+        })
+
+    return render_template('index.html')
+
+if __name__ == '__main__':
+    app.run(debug=True)

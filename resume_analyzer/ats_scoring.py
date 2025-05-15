@@ -9,15 +9,15 @@ class ATSScoring:
         self.nlp = spacy.load("en_core_web_sm")
         self.job_matcher = JobMatcher()
 
-    def score_resume(self, resume_file, job_description):
+    def score_resume(self, resume_text, job_description):
         """Scores the resume based on keyword match and readability."""
-        match_result = self.job_matcher.match_resume_to_job(resume_file, job_description)
+
+        match_result = self.job_matcher.match_resume_to_job(resume_text, job_description)
         match_score = match_result["match_score"]
 
         # Readability Score (basic approximation based on sentence length)
-        resume_text = self.job_matcher.resume_parser.parse_resume(resume_file)["text"]
         sentences = resume_text.split(".")
-        avg_sentence_length = sum(len(sent.split()) for sent in sentences) / len(sentences)
+        avg_sentence_length = sum(len(sent.split()) for sent in sentences) / max(len(sentences), 1)
         readability_score = max(100 - avg_sentence_length, 0)
 
         return {

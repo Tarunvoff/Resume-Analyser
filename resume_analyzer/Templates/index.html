@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AI Resume Analyzer</title>
+</head>
+<body>
+  <h2>Upload Your Resume</h2>
+  <form action="/" method="POST" enctype="multipart/form-data">
+    <label for="resume">Select resume (.pdf or .docx):</label><br>
+    <input type="file" name="resume" required><br><br>
+
+    <label for="job_description">Paste job description:</label><br>
+    <textarea name="job_description" rows="5" cols="60" required></textarea><br><br>
+
+    <label for="user_query">Ask career advice (optional):</label><br>
+    <input type="text" name="user_query" style="width: 400px;"><br><br>
+
+    <input type="submit" value="Analyze Resume">
+  </form>
+</body>
+</html>
